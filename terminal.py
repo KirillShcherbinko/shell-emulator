@@ -12,12 +12,18 @@ class Terminal(object):
 
     cur_dir = ""
     processing = True
+    vfsFiles = []
+    old_file_path = ""
+    new_file_path = ""
 
     def __init__(self, username, vfs_path, logfile_path, start_script_path):
         self.username = username
         self.vfsPath = vfs_path
         self.logfilePath = logfile_path
         self.start_script_path = start_script_path
+        self.get_files_list(vfs_path)
+
+    def get_files_list(self, vfs_path):
         with ZipFile(vfs_path, 'r') as vfs_file:
             self.vfsFiles = vfs_file.namelist()
         vfs_file.close()
@@ -26,13 +32,6 @@ class Terminal(object):
             if top_file not in self.vfsFiles:
                 self.vfsFiles.append(top_file)
             self.vfsFiles[i] = self.vfsFiles[i].rstrip('/')
-
-
-    def get_file_name(self, file_path):
-        file_name = file_path.split('/')
-        for dir in reversed(file_name):
-            if dir != '':
-                return dir
 
     def get_full_path(self, file_path):
         if self.cur_dir in file_path:
@@ -48,30 +47,33 @@ class Terminal(object):
             return True
         return False
 
-    def move_ability(self, old_file_path, new_file_path):
-        if old_file_path not in self.vfsFiles:
-            print(f'Файла {old_file_path} не существует')
+    def move_ability(self):
+        old_file_name = path.basename(self.old_file_path)
+        new_file_name = path.basename(self.new_file_path)
+        if self.old_file_path not in self.vfsFiles:
+            print(f'Файла {self.old_file_path} не существует')
             return False
-        if new_file_path not in self.vfsFiles:
-            old_file_name = path.basename(old_file_path)
-            new_file_name = path.basename(new_file_path)
+        if self.new_file_path == "~":
+            self.new_file_path = ""
+        elif self.new_file_path not in self.vfsFiles:
             if self.rename_check(old_file_name, new_file_name):
-                if get_extension(new_file_path) == new_file_path:
-                    real_new_file_path = new_file_path.replace('/' + new_file_name, '')
-                if real_new_file_path not in self.vfsFiles:
-                    print(f'Директории {new_file_path} не существует')
+                real_new_file_path = self.new_file_path.replace('/' + new_file_name, '')
+                if real_new_file_path not in self.vfsFiles and new_file_name != self.new_file_path:
+                    print(f'Директории {self.new_file_path} не существует')
                     return False
                 return True
-        else:
-            return True
+            print(f'Недопустимое имя файла {self.new_file_path}')
+            return False
+        self.new_file_path = path.join(self.new_file_path, old_file_name)
+        return True
 
-    def move_file(self, old_file_path, new_file_path):
+    def move_file(self):
         tmp_vfs_path = path.join(path.dirname(self.vfsPath), f'{int(time())}_{path.basename(self.vfsPath)}')
         with ZipFile(tmp_vfs_path, 'w') as tmp_vfs_file:
             with ZipFile(self.vfsPath, 'r') as vfs_file:
                 for file in vfs_file.namelist():
-                    if file == old_file_path or file.startswith(old_file_path + '/'):
-                        new_file = file.replace(old_file_path, new_file_path, 1)
+                    if file == self.old_file_path or file.startswith(self.old_file_path + '/'):
+                        new_file = file.replace(self.old_file_path, self.new_file_path, 1)
                         tmp_vfs_file.writestr(new_file, vfs_file.read(file))
                     else:
                         tmp_vfs_file.writestr(file, vfs_file.read(file))
@@ -98,7 +100,7 @@ class Terminal(object):
         elif message_data[0] == "whoami":
             self.whoami(message_data[1:])
         elif message_data[0] == "pwd":
-            self.pwd(message_data[1:])
+            self.pwd()
         else:
             print("Введена неверная команда")
 
@@ -115,7 +117,10 @@ class Terminal(object):
         print('exit')
         self.processing = False
 
-    def pwd(self, message_data):
+    def pwd(self):
+        if self.cur_dir == '':
+            print("~")
+            return
         print(self.cur_dir)
 
     def whoami(self, message_data):
@@ -129,9 +134,12 @@ class Terminal(object):
             if len(message_data) < 2:
                 print("Введено не достаточно аргументов")
                 return
-            old_file_path = self.get_full_path(message_data[0])
-            new_file_path = self.get_full_path(message_data[1])
-            if self.move_ability(old_file_path, new_file_path):
-                self.move_file(old_file_path, new_file_path)
+            self.old_file_path = self.get_full_path(message_data[0])
+            self.new_file_path = self.get_full_path(message_data[1])
+            if self.move_ability():
+                self.move_file()
+                self.get_files_list(self.vfsPath)
+                self.old_file_path = ""
+                self.new_file_path = ""
         except:
             print("Не удалось выполнить команду")
