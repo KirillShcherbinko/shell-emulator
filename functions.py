@@ -1,4 +1,5 @@
 from os.path import exists
+from os.path import splitext
 
 
 def username_correctness(username):
@@ -17,14 +18,10 @@ def username_correctness(username):
 
 
 def get_extension(file_path):
-    extension = ""
-    for i in range(-1, -len(file_path), -1):
-        if file_path[i] != '.':
-            extension += file_path[i]
-        else:
-            break
-    return extension[::-1]
-
+    file_name, file_extension = splitext(file_path)
+    if file_extension != '':
+        return file_extension
+    return file_name
 
 def file_path_existence(file_path):
     if not exists(file_path):
@@ -36,12 +33,12 @@ def file_path_existence(file_path):
 def file_path_extension(file_path, required_extension):
     real_extension = get_extension(file_path)
     if required_extension != real_extension:
-        print(f'Данный файл имеет разрешение {real_extension}, а должен иметь - {required_extension}')
+        print(f'Данный файл должен иметь разрешение: {required_extension}')
         return False
     return True
 
 
-def file_path_correctness(file_path,  required_extension):
+def file_path_correctness(file_path, required_extension):
     if not file_path_existence(file_path):
         return False
     if not file_path_extension(file_path, required_extension):
