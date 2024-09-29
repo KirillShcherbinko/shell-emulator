@@ -4,6 +4,7 @@ from json import dump
 from zipfile import ZipFile
 from socket import gethostname
 from time import time
+from datetime import datetime, timedelta
 from functions import get_extension
 from shutil import move
 
@@ -15,6 +16,12 @@ class Terminal(object):
     vfsFiles = []
     old_file_path = ""
     new_file_path = ""
+    command_data = {
+        "user": "",
+        "command": "",
+        "status": "",
+        "time": ""
+    }
 
     def __init__(self, username, vfs_path, logfile_path, start_script_path):
         self.username = username
@@ -22,6 +29,17 @@ class Terminal(object):
         self.logfilePath = logfile_path
         self.start_script_path = start_script_path
         self.get_files_list(vfs_path)
+        with open(self.logfilePath, 'w') as logfile:
+            dump({}, logfile)
+
+    def record_data(self, command, status):
+        self.command_data["user"] = str(self.username)
+        self.command_data["command"] = command
+        self.command_data["status"] = status
+        self.command_data["time"] = str(datetime.utcnow() + timedelta(hours=3))
+        with open(self.logfilePath, 'a', encoding='utf-8') as logfile:
+            logfile.write('\n')
+            dump(self.command_data, logfile, ensure_ascii=False, indent=4)
 
     def get_files_list(self, vfs_path):
         with ZipFile(vfs_path, 'r') as vfs_file:
@@ -73,15 +91,18 @@ class Terminal(object):
         new_file_name = path.basename(self.new_file_path)
         if self.old_file_path not in self.vfsFiles:
             print("Файл не найден")
+            self.record_data(f'mv {self.old_file_path} {self.new_file_path}', "ERROR")
             return False
         if self.new_file_path not in self.vfsFiles and self.new_file_path != "":
             if self.rename_check(old_file_name, new_file_name):
                 real_new_file_path = self.replace_basename(self.new_file_path, new_file_name, '').rstrip('/')
                 if real_new_file_path not in self.vfsFiles and new_file_name != self.new_file_path:
                     print("Файл не найден")
+                    self.record_data(f'mv {self.old_file_path} {self.new_file_path}', "ERROR")
                     return False
                 return True
             print(f'Недопустимое имя файла {self.new_file_path}')
+            self.record_data(f'mv {self.old_file_path} {self.new_file_path}', "ERROR")
             return False
         self.new_file_path = (self.new_file_path + '/' +  old_file_name).strip('/')
         return True
@@ -113,6 +134,7 @@ class Terminal(object):
 
     def command_selector(self, message_data):
         if len(message_data) == 0:
+            self.record_data("", "OK")
             return
         elif message_data[0] == "ls":
             self.ls(message_data[1:])
@@ -128,11 +150,13 @@ class Terminal(object):
             self.pwd()
         else:
             print("Введена неверная команда")
+            self.record_data("".join(message_data), "ERROR")
 
     def ls(self, message_data):
         try:
             if len(message_data) > 1:
                 print("Введено слишком много аргументов")
+                self.record_data(f'ls {"".join(message_data)}', "ERROR")
                 return
             if len(message_data) == 0:
                 message_data.append('.')
@@ -142,48 +166,62 @@ class Terminal(object):
                 if dir_name == self.replace_basename(file, file_basename, "").rstrip('/'):
                     print(file_basename, end = '    ')
             print()
+            self.record_data(f'ls {"".join(message_data)}', "OK")
         except:
             print("Не удалось выполнить команду")
+            self.record_data(f'ls {"".join(message_data)}', "ERROR")
 
     def cd(self, message_data):
         try:
             if len(message_data) == 0:
                 self.cur_dir = ""
+                self.record_data("cd", "OK")
                 return
             elif len(message_data) > 1:
                 print("Слишком много аргументов для функции cd")
+                self.record_data(f'cd {"".join(message_data)}', "ERROR")
                 return
             new_dir = self.get_full_path(message_data[0].rstrip('/'))
             if new_dir in self.vfsFiles and get_extension(new_dir) == new_dir:
                 self.cur_dir = new_dir
+                self.record_data(f'cd {"".join(message_data)}', "OK")
                 return
             if new_dir == "":
+                self.record_data(f'cd {"".join(message_data)}', "OK")
                 return
             print("Не удалось найти директорию с таким именем")
+            self.record_data(f'cd {"".join(message_data)}', "ERROR")
         except:
             print("Не удалось выполнить команду")
+            self.record_data(f'cd {"".join(message_data)}', "ERROR")
 
 
     def exit(self):
         print('exit')
         self.processing = False
+        self.record_data("exit", "OK")
 
     def pwd(self):
         print(("/home/" + self.username + '/' + self.cur_dir).rstrip('/'))
+        self.record_data("pwd", "OK")
 
     def whoami(self, message_data):
         if len(message_data) > 0:
             print(f'whoami: лишний операнд {message_data[0]}')
+            self.record_data(f'whoami {"".join(message_data)}', "ERROR")
         else:
             print(self.username)
+            self.record_data("whoami", "OK")
 
     def mv(self, message_data):
         try:
             if len(message_data) > 2:
                 print("Введено слишком много аргументов")
+                self.record_data(f'mv {"".join(message_data)}', "ERROR")
                 return
             if len(message_data) < 2:
                 print("Введено не достаточно аргументов")
+                self.record_data(f'mv {"" if len(message_data) != 0 else "".join(message_data) }', "ERROR")
                 return
             self.old_file_path = self.get_full_path(message_data[0].rstrip('/'))
             self.new_file_path = self.get_full_path(message_data[1].rstrip('/'))
@@ -192,5 +230,7 @@ class Terminal(object):
                 self.get_files_list(self.vfsPath)
             self.old_file_path = ""
             self.new_file_path = ""
+            self.record_data(f'mv {"".join(message_data)}', "OK")
         except:
             print("Не удалось выполнить команду")
+            self.record_data(f'mv {"".join(message_data)}', "ERROR")
