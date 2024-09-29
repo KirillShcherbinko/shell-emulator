@@ -27,16 +27,16 @@ class Terminal(object):
         self.username = username
         self.vfsPath = vfs_path
         self.logfilePath = logfile_path
-        self.start_script_path = start_script_path
+        self.startScriptPath = start_script_path
         self.get_files_list(vfs_path)
         with open(self.logfilePath, 'w') as logfile:
             dump({}, logfile)
 
     def record_data(self, command, status):
-        self.command_data["user"] = str(self.username)
-        self.command_data["command"] = command
-        self.command_data["status"] = status
-        self.command_data["time"] = str(datetime.utcnow() + timedelta(hours=3))
+        self.command_data["user"] = str(self.username).strip()
+        self.command_data["command"] = command.strip()
+        self.command_data["status"] = status.strip()
+        self.command_data["time"] = str(datetime.utcnow() + timedelta(hours=3)).strip()
         with open(self.logfilePath, 'a', encoding='utf-8') as logfile:
             logfile.write('\n')
             dump(self.command_data, logfile, ensure_ascii=False, indent=4)
@@ -54,11 +54,12 @@ class Terminal(object):
                 if top_file.rstrip('/') not in self.vfsFiles:
                     self.vfsFiles.append(top_file.rstrip('/'))
 
-    def replace_basename(self, file_path, old, new):
+    @staticmethod
+    def replace_basename(file_path, old, new):
         return file_path[::-1].replace(old[::-1], new[::-1], 1)[::-1]
 
     def get_previous_dir(self, file_path_parts, cur_dir):
-        if cur_dir == "" or not ".." in file_path_parts:
+        if cur_dir == "" or ".." not in file_path_parts:
             return cur_dir
         file_basename = path.basename(cur_dir)
         cur_dir = self.replace_basename(cur_dir, file_basename, "").rstrip('/')
@@ -77,7 +78,8 @@ class Terminal(object):
             return file_path.lstrip("~/")
         return self.cur_dir + '/' + file_path
 
-    def rename_check(self, old_file_name, new_file_name):
+    @staticmethod
+    def rename_check(old_file_name, new_file_name):
         old_file_extension = get_extension(old_file_name)
         new_file_extension = get_extension(new_file_name)
         if old_file_extension == old_file_name and new_file_extension == new_file_name:
@@ -104,7 +106,7 @@ class Terminal(object):
             print(f'Недопустимое имя файла {self.new_file_path}')
             self.record_data(f'mv {self.old_file_path} {self.new_file_path}', "ERROR")
             return False
-        self.new_file_path = (self.new_file_path + '/' +  old_file_name).strip('/')
+        self.new_file_path = (self.new_file_path + '/' + old_file_name).strip('/')
         return True
 
     def move_file(self):
@@ -125,6 +127,14 @@ class Terminal(object):
                     tmp_vfs_file.writestr(empty_folder + '/', '')
         remove(self.vfsPath)
         move(tmp_vfs_path, self.vfsPath)
+
+    def start_script_exec(self):
+        with open(self.startScriptPath, 'r') as start_script_file:
+            end_of_message = "\n"
+            for message in start_script_file:
+                print(f'{self.username}@{gethostname()}:~{self.cur_dir}$ {message.strip(end_of_message)}')
+                message_data = message.split()
+                self.command_selector(message_data)
 
     def start_work_process(self):
         while self.processing:
@@ -164,7 +174,7 @@ class Terminal(object):
             for file in self.vfsFiles:
                 file_basename = path.basename(file)
                 if dir_name == self.replace_basename(file, file_basename, "").rstrip('/'):
-                    print(file_basename, end = '    ')
+                    print(file_basename, end='    ')
             print()
             self.record_data(f'ls {"".join(message_data)}', "OK")
         except:
@@ -195,7 +205,6 @@ class Terminal(object):
             print("Не удалось выполнить команду")
             self.record_data(f'cd {"".join(message_data)}', "ERROR")
 
-
     def exit(self):
         print('exit')
         self.processing = False
@@ -225,6 +234,10 @@ class Terminal(object):
                 return
             self.old_file_path = self.get_full_path(message_data[0].rstrip('/'))
             self.new_file_path = self.get_full_path(message_data[1].rstrip('/'))
+            if self.old_file_path == self.new_file_path:
+                print(f'Невозможно {self.new_file_path} перенести в собственный каталог')
+                self.record_data(f'mv {"".join(message_data)}', "ERROR")
+                return
             if self.move_ability():
                 self.move_file()
                 self.get_files_list(self.vfsPath)

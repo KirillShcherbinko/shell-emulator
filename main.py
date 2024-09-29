@@ -2,7 +2,6 @@ from functions import username_correctness
 from functions import file_path_correctness
 from terminal import Terminal
 from sys import argv
-from zipfile import ZipFile
 
 
 def main():
@@ -16,6 +15,9 @@ def main():
             logfile_path = argv[3]
             start_script_path = argv[4]
             terminal = Terminal(username, vfs_path, logfile_path, start_script_path)
+            start_script_launch = input("Нажмите y, чтобы начать исполнение стартового скрипта ")
+            if start_script_launch == "y":
+                terminal.start_script_exec()
             terminal.start_work_process()
     elif len(argv) < 5:
         print("Введено недостаточное количество аргументов")
