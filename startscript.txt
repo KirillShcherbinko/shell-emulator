@@ -1,0 +1,5 @@
+whoami
+cd root/home/user
+ls
+mv drinks.txt new_drinks.txt
+pwd
