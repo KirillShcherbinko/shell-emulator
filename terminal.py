@@ -79,7 +79,14 @@ class Terminal(object):
         if ".." in file_path:
             file_path_parts = file_path.rstrip('/').split('/')
             real_file_path_parts = file_path.strip('/').split('.')
-            return (self.get_previous_dir(file_path_parts, self.cur_dir) + '/'
+            if self.cur_dir != "" or self.cur_dir == self.old_file_path:
+                return (self.get_previous_dir(file_path_parts, self.cur_dir) + '/'
+                    + real_file_path_parts[-1].strip('/')).rstrip('/')
+            if self.old_file_path == ".." and self.cur_dir == "":
+                self.old_file_path = ""
+            dir_basename = path.basename(self.old_file_path).rstrip('/')
+            real_dir = self.replace_basename(self.old_file_path, dir_basename, "")
+            return (self.get_previous_dir(file_path_parts, real_dir) + '/'
                     + real_file_path_parts[-1].strip('/')).rstrip('/')
         if file_path[:2] == "~/" or self.cur_dir == "":
             file_path = file_path.lstrip("~/")
@@ -177,9 +184,17 @@ class Terminal(object):
                 print("Введено слишком много аргументов")
                 self.record_data(f'ls {"".join(message_data)}', "ERROR")
                 return
+            if len(message_data) == 1 and get_extension(message_data[0]) != message_data[0]:
+                print(f'Введено некорректное значение {message_data[0]}')
+                self.record_data(f'ls {"".join(message_data)}', "ERROR")
+                return
             if len(message_data) == 0:
                 message_data.append('.')
             dir_name = self.get_full_path(message_data[0])
+            if dir_name not in self.vfsFiles and dir_name != "":
+                print(f'Директория {message_data[0]} не найдена')
+                self.record_data(f'ls {"".join(message_data)}', "ERROR")
+                return
             for file in self.vfsFiles:
                 file_basename = path.basename(file)
                 if dir_name == self.replace_basename(file, file_basename, ""):
@@ -243,8 +258,8 @@ class Terminal(object):
                 return
             self.old_file_path = self.get_full_path(message_data[0].rstrip('/'))
             self.new_file_path = self.get_full_path(message_data[1].rstrip('/'))
-            if self.old_file_path == self.new_file_path:
-                print("Невозможно переместить файл в собственный каталог")
+            if self.old_file_path in self.new_file_path:
+                print("Невозможно переместить каталог в собственный подкаталог")
                 self.record_data(f'mv {"".join(message_data)}', "ERROR")
                 return
             if self.move_ability():

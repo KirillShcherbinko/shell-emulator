@@ -86,6 +86,19 @@ def test_ls2(terminal, capfd):
     assert out == "Введено слишком много аргументов\n"
 
 
+def test_ls3(terminal, capfd):
+    terminal.ls(["text.txt"])
+    out, err = capfd.readouterr()
+    assert out == "Введено некорректное значение text.txt\n"
+
+
+def test_ls4(terminal, capfd):
+    terminal.cur_dir = "root"
+    terminal.ls(["text"])
+    out, err = capfd.readouterr()
+    assert out == "Директория text не найдена\n"
+
+
 def test_cd1(terminal, capfd):
     terminal.cur_dir = ""
     terminal.cd(["root", "sdf"])
@@ -142,7 +155,7 @@ def test_mv3(terminal, capfd):
     terminal.cur_dir = "root"
     terminal.mv(["home", "home"])
     out, err = capfd.readouterr()
-    assert out == "Невозможно переместить файл в собственный каталог\n"
+    assert out == "Невозможно переместить каталог в собственный подкаталог\n"
 
 
 def test_mv4(terminal, capfd):
@@ -161,9 +174,9 @@ def test_mv5(terminal, capfd):
 
 def test_mv6(terminal, capfd):
     terminal.cur_dir = "root"
-    terminal.mv(["bin", "drinks.txt"])
+    terminal.mv(["bin", "food.txt"])
     out, err = capfd.readouterr()
-    assert out == "Недопустимое имя файла drinks.txt\n"
+    assert out == "Недопустимое имя файла food.txt\n"
 
 
 def test_mv7(terminal, capfd):
