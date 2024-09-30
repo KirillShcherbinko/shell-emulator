@@ -110,7 +110,7 @@ whoami
 mv [old file path] [new file path]
 ```
 
-![Uploading image.png…]()
+![image](https://github.com/user-attachments/assets/a14075cd-7bb3-4069-bfcb-a82237a48630)
 
 
 # Тестирование
