@@ -65,7 +65,7 @@ mv [old file path] [new file path]
 ```
 
 # Тестирование
-Для всех команд были написаны тесты. В ходе тестирования удалось добиться покрытия 83%.
+Для всех команд были написаны тесты. В ходе тестирования удалось добиться покрытия 79%.
 
 ## Запуск тестирования
 
@@ -93,6 +93,11 @@ coverage run --branch -m pytest test_terminal.py
 coverage report
 ```
 
-## Прохождение всех тестов и процент покрытия
-![image](https://github.com/user-attachments/assets/279cdaec-b536-4db5-bb7a-32e52783cdef)
+## Прохождение всех тестов
+
+![image](https://github.com/user-attachments/assets/f5855c3c-9a47-486a-9429-2f6071649866)
+
+## Процент покрытия
+
+![image](https://github.com/user-attachments/assets/9202a9cb-0df6-43ae-ad85-72af7be33a38)
 
